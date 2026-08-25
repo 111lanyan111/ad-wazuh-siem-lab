@@ -1,0 +1,130 @@
+# 操作系统
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# 虚拟机
+*.vbox
+*.vdi
+*.vmdk
+*.ova
+*.ovf
+*.vmem
+*.vmsn
+*.vmsd
+*.vmx
+*.vmxf
+VirtualBox VMs/
+.vagrant/
+
+# 敏感信息（不要提交真实密码/Hash/Token）
+*.env
+*.env.local
+*.env.*.local
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+secrets/
+credentials/
+*.secret
+*.priv
+
+# 日志
+*.log
+logs/
+*.log.*
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+*.pid
+*.seed
+
+# 压缩包
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# 可执行文件（攻击工具，避免被杀毒软件标记）
+*.exe
+*.dll
+*.bin
+*.elf
+!**/reference/**
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Wazuh 相关
+ossec.log
+alerts.json
+alerts.log
+archives/
+
+# 攻击工具目录（不提交二进制）
+tools/
+binaries/
+payloads/
