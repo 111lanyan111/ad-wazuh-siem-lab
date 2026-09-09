@@ -1,0 +1,60 @@
+﻿title: Windows 鏈嶅姟鏉冮檺閰嶇疆閿欒鎻愭潈妫€娴?id: abc12345-0009-4abc-8def-000000000009
+status: experimental
+description: 妫€娴嬮€氳繃淇敼鏈嶅姟鍙墽琛屾枃浠舵垨鏈嶅姟閰嶇疆杩涜鐨勬潈闄愭彁鍗囨敾鍑伙紝鍖呮嫭鏈嶅姟鏂囦欢琚鐩栥€佹湇鍔inPath琚慨鏀逛负鎭舵剰鍛戒护
+references:
+    - https://attack.mitre.org/techniques/T1543/003/
+    - https://attack.mitre.org/techniques/T1068/
+    - https://pentestlab.blog/2017/03/31/unquoted-service-path/
+author: 111lanyan111
+date: 2024/01/15
+tags:
+    - attack.privilege_escalation
+    - attack.t1543.003
+    - attack.t1068
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    # 淇敼鏈嶅姟閰嶇疆
+    selection_sc_config:
+        Image|endswith: '\sc.exe'
+        CommandLine|contains:
+            - 'config'
+            - 'binPath='
+    # 浣跨敤 icacls 淇敼鏈嶅姟鐩綍鏉冮檺
+    selection_icacls:
+        Image|endswith: '\icacls.exe'
+        CommandLine|contains:
+            - '/grant'
+            - 'Users:F'
+            - 'Everyone:F'
+            - 'Authenticated Users:F'
+    # 鏈嶅姟鍙墽琛屾枃浠惰瑕嗙洊锛堥€氳繃 Sysmon 鏂囦欢鍒涘缓浜嬩欢锛?    selection_file_overwrite:
+        TargetFilename|contains:
+            - '\Program Files\'
+            - '\Windows\System32\'
+        TargetFilename|endswith:
+            - '.exe'
+            - '.dll'
+        Image|endswith:
+            - '\cmd.exe'
+            - '\powershell.exe'
+            - '\copy.exe'
+            - '\xcopy.exe'
+    # 鏈嶅姟娲剧敓鍙枒杩涚▼锛坈md/powershell锛?    selection_service_child:
+        ParentImage|endswith: '\services.exe'
+        Image|endswith:
+            - '\cmd.exe'
+            - '\powershell.exe'
+            - '\net.exe'
+            - '\net1.exe'
+    condition: 1 of selection_*
+fields:
+    - Image
+    - CommandLine
+    - ParentImage
+    - TargetFilename
+    - User
+falsepositives:
+    - 绠＄悊鍛樻墜鍔ㄤ慨鏀规湇鍔￠厤缃?    - 杞欢鏇存柊瑕嗙洊鏈嶅姟鏂囦欢
+    - 绯荤粺鏈嶅姟姝ｅ父鍚姩瀛愯繘绋?level: high

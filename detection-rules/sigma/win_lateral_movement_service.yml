@@ -1,0 +1,59 @@
+﻿title: 鍙枒 Windows 鏈嶅姟鍒涘缓妯悜绉诲姩妫€娴?id: abc12345-0008-4abc-8def-000000000008
+status: experimental
+description: 妫€娴嬮€氳繃鍒涘缓 Windows 鏈嶅姟杩涜鐨勬í鍚戠Щ鍔ㄦ垨鎸佷箙鍖栵紝鐗瑰緛鍖呮嫭鏈嶅姟璺緞鎸囧悜涓存椂鐩綍銆佸彲鐤戝彲鎵ц鏂囦欢鍚嶃€佹湇鍔″悕鏃犳剰涔?references:
+    - https://attack.mitre.org/techniques/T1543/003/
+    - https://attack.mitre.org/techniques/T1021/002/
+    - https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4697
+author: 111lanyan111
+date: 2024/01/15
+tags:
+    - attack.persistence
+    - attack.t1543.003
+    - attack.lateral_movement
+    - attack.t1021.002
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 4697  # 鏈嶅姟鍒涘缓
+    # 鍙枒鏈嶅姟璺緞
+    suspicious_path:
+        ServiceFileName|contains:
+            - '\Temp\'
+            - '\Users\Public\'
+            - '\AppData\Local\Temp\'
+            - '\Windows\Temp\'
+            - '%temp%'
+            - '%Public%'
+    # 鍙枒鏈嶅姟鍚嶏紙闅忔満鎴栨棤鎰忎箟锛?    suspicious_name:
+        ServiceName|re: '^[a-zA-Z]{6,12}$'
+    # 鏈嶅姟璺緞鍖呭惈鍛戒护瑙ｉ噴鍣?    suspicious_cmd:
+        ServiceFileName|contains:
+            - 'cmd.exe'
+            - 'powershell.exe'
+            - 'rundll32.exe'
+            - 'regsvr32.exe'
+            - 'mshta.exe'
+            - 'wscript.exe'
+            - 'cscript.exe'
+    # 鎺掗櫎宸茬煡鐨勫悎娉曟湇鍔?    filter_legitimate:
+        ServiceName|startswith:
+            - 'Wazuh'
+            - 'Sysmon'
+            - 'Windows '
+            - 'Microsoft '
+        ServiceFileName|startswith:
+            - 'C:\Windows\System32\'
+            - 'C:\Program Files\'
+    condition: selection and (suspicious_path or suspicious_name or suspicious_cmd) and not filter_legitimate
+fields:
+    - EventID
+    - ServiceName
+    - ServiceFileName
+    - SubjectUserName
+    - SubjectDomainName
+falsepositives:
+    - 鍚堟硶杞欢瀹夎鍒涘缓鐨勬湇鍔?    - 椹卞姩绋嬪簭瀹夎
+    - 绯荤粺鏇存柊
+level: high

@@ -1,0 +1,64 @@
+﻿title: Pass-the-Hash NTLM 璁よ瘉寮傚父妫€娴?id: abc12345-0005-4abc-8def-000000000005
+status: experimental
+description: 妫€娴嬪紓甯哥殑 NTLM 缃戠粶鐧诲綍锛屽彲鑳芥槸 Pass-the-Hash 鏀诲嚮銆傜壒寰佸寘鎷細浣跨敤绠＄悊鍛樿处鍙疯繘琛岀綉缁滅櫥褰曘€佹棤瀵瑰簲浜や簰寮忕櫥褰曘€佹潵婧愪富鏈哄紓甯?references:
+    - https://attack.mitre.org/techniques/T1550/002/
+    - https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4624
+author: 111lanyan111
+date: 2024/01/15
+tags:
+    - attack.lateral_movement
+    - attack.t1550.002
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 4624
+        LogonType: 3  # Network
+        AuthenticationPackageName: 'NTLM'
+        TargetUserName|endswith:
+            - 'administrator'
+            - 'admin'
+            - 'backup'
+    # 鎺掗櫎姝ｅ父鐨勭鐞嗗憳缃戠粶鐧诲綍锛堟潵鑷煙鎺ф垨绠＄悊涓绘満锛?    filter_normal:
+        WorkstationName:
+            - 'DC01'
+            - 'ADMIN-PC'
+        IpAddress|startswith:
+            - '192.168.56.20'  # DC01
+    condition: selection and not filter_normal
+fields:
+    - EventID
+    - TargetUserName
+    - IpAddress
+    - WorkstationName
+    - LogonType
+    - AuthenticationPackageName
+    - LogonProcessName
+falsepositives:
+    - 绠＄悊鍛樹娇鐢?PsExec 杩涜鍚堟硶杩愮淮
+    - 澶囦唤杞欢璁块棶绠＄悊鍛樺叡浜?    - 鐩戞帶绯荤粺鐨勮繙绋嬫鏌?level: high
+---
+# 鍏宠仈瑙勫垯锛歁imikatz 鎵ц鍚庡嚭鐜板紓甯?NTLM 鐧诲綍
+title: Mimikatz 鎵ц鍚?Pass-the-Hash 鍏宠仈妫€娴?id: abc12345-0006-4abc-8def-000000000006
+status: experimental
+description: 妫€娴嬪湪鍚屼竴涓绘満涓?Mimikatz 鎵ц鍚庣煭鏃堕棿鍐呭嚭鐜扮殑寮傚父 NTLM 缃戠粶鐧诲綍锛岄珮搴︾枒浼?Pass-the-Hash
+author: 111lanyan111
+date: 2024/01/15
+tags:
+    - attack.lateral_movement
+    - attack.t1550.002
+    - attack.credential_access
+    - attack.t1003.001
+detection:
+    mimikatz:
+        Image|contains: 'mimikatz'
+        CommandLine|contains:
+            - 'sekurlsa'
+            - 'lsadump'
+    pth:
+        EventID: 4624
+        LogonType: 3
+        AuthenticationPackageName: 'NTLM'
+    condition: mimikatz and pth | join(ComputerName) maxspan=5m
+level: critical

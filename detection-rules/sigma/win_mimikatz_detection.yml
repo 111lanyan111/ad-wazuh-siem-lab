@@ -1,0 +1,66 @@
+﻿title: Mimikatz 鍑瘉绐冨彇宸ュ叿妫€娴?id: abc12345-0004-4abc-8def-000000000004
+status: experimental
+description: 妫€娴?Mimikatz 鎴栫被浼煎嚟璇佺獌鍙栧伐鍏风殑鎵ц锛屽寘鎷繘绋嬪悕銆佸懡浠よ鍙傛暟鍜屽彲鐤戣涓?references:
+    - https://attack.mitre.org/techniques/T1003/001/
+    - https://github.com/gentilkiwi/mimikatz
+    - https://attack.mitre.org/techniques/T1550/002/
+author: 111lanyan111
+date: 2024/01/15
+modified: 2024/01/15
+tags:
+    - attack.credential_access
+    - attack.t1003.001
+    - attack.t1550.002
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    # 鍩轰簬杩涚▼鍚嶆娴?    selection_process:
+        Image|endswith:
+            - '\mimikatz.exe'
+            - '\mimikatz.exe'
+            - '\mimidrv.sys'
+        Image|contains:
+            - 'mimikatz'
+            - 'mimilib'
+            - 'mimidrv'
+    # 鍩轰簬鍛戒护琛屽弬鏁版娴?    selection_cmdline:
+        CommandLine|contains:
+            - 'sekurlsa'
+            - 'sekurlsa::logonpasswords'
+            - 'sekurlsa::msv'
+            - 'sekurlsa::kerberos'
+            - 'lsadump'
+            - 'lsadump::lsa'
+            - 'lsadump::sam'
+            - 'lsadump::secrets'
+            - 'kerberos::golden'
+            - 'kerberos::silver'
+            - 'privilege::debug'
+            - 'token::elevate'
+            - 'vault::cred'
+            - 'vault::list'
+    # 鍩轰簬鍏朵粬鍑瘉绐冨彇宸ュ叿
+    selection_tools:
+        Image|endswith:
+            - '\procdump.exe'
+            - '\procdump64.exe'
+            - '\comsvcs.dll'
+        CommandLine|contains:
+            - 'lsass.exe'
+            - '-ma lsass'
+            - 'lsass.dmp'
+    # 鎺掗櫎鍚堟硶鐨?procdump 浣跨敤锛堢敱寰蒋绛惧悕锛屼笖鏈夋槑纭殑璋冭瘯鐩殑锛?    filter_procdump:
+        Image|endswith: '\procdump.exe'
+        CommandLine|contains:
+            - '-accepteula'
+            - '-ma'
+    condition: selection_process or selection_cmdline or (selection_tools and not filter_procdump)
+fields:
+    - Image
+    - CommandLine
+    - ParentImage
+    - User
+    - ProcessId
+falsepositives:
+    - 鎺堟潈鐨勬笚閫忔祴璇曟椿鍔?    - 瀹夊叏鍥㈤槦鐨勫嚟璇佸璁?    - 寰蒋瀹樻柟璋冭瘯宸ュ叿鐨勫悎娉曚娇鐢?level: critical

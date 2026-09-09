@@ -1,0 +1,36 @@
+﻿title: Windows 鏆村姏鐮磋В鍚庢垚鍔熺櫥褰?id: abc12345-0003-4abc-8def-000000000003
+status: experimental
+description: 妫€娴嬪悓涓€璐﹀彿鍦ㄧ煭鏃堕棿鍐呯粡鍘嗗ぇ閲忕櫥褰曞け璐ュ悗鎴愬姛鐧诲綍鐨勬ā寮忥紝鍙兘琛ㄧず鏆村姏鐮磋В鎴愬姛
+references:
+    - https://attack.mitre.org/techniques/T1110/001/
+author: 111lanyan111
+date: 2024/01/15
+tags:
+    - attack.credential_access
+    - attack.t1110.001
+    - attack.initial_access
+logsource:
+    product: windows
+    service: security
+detection:
+    # 鐧诲綍澶辫触浜嬩欢
+    failed:
+        EventID: 4625
+        TargetUserName|exists: true
+    # 鐧诲綍鎴愬姛浜嬩欢
+    success:
+        EventID: 4624
+        LogonType:
+            - 2
+            - 3
+            - 10
+    # 鍏宠仈鏉′欢锛氬悓涓€璐﹀彿銆佸悓涓€IP锛屽け璐ュ悗鎴愬姛
+    condition: failed and success | join(TargetUserName, IpAddress) maxspan=10m
+fields:
+    - EventID
+    - TargetUserName
+    - IpAddress
+    - LogonType
+    - WorkstationName
+falsepositives:
+    - 鐢ㄦ埛杈撻敊瀵嗙爜鍚庢兂璧锋纭瘑鐮侊紙閫氬父澶辫触娆℃暟<3锛?    - 瀵嗙爜杩囨湡鍚庣敤鎴蜂慨鏀瑰瘑鐮侀噸鏂扮櫥褰?level: critical

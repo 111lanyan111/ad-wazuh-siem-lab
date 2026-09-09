@@ -1,0 +1,62 @@
+﻿title: 鍙枒绠＄悊鍛樼敤鎴峰垱寤烘娴?id: abc12345-0011-4abc-8def-000000000011
+status: experimental
+description: 妫€娴嬮潪宸ヤ綔鏃舵鎴栭潪绠＄悊涓绘満涓婂垱寤虹殑绠＄悊鍛樼敤鎴凤紝鍙兘鏄敾鍑昏€呭缓绔嬫寔涔呭寲鍚庨棬
+references:
+    - https://attack.mitre.org/techniques/T1136/001/
+    - https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4720
+author: 111lanyan111
+date: 2024/01/15
+tags:
+    - attack.persistence
+    - attack.t1136.001
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 4720  # 鐢ㄦ埛璐︽埛鍒涘缓
+    # 鍙枒鐢ㄦ埛鍚嶏紙闅愯棌鐢ㄦ埛銆佸父瑙佸悗闂ㄧ敤鎴峰悕锛?    suspicious_username:
+        TargetUserName|endswith: '$'
+        TargetUserName|contains:
+            - 'backdoor'
+            - 'hidden'
+            - 'admin2'
+            - 'test'
+            - 'temp'
+            - 'support'
+            - 'helpdesk'
+    # 闈炲伐浣滄椂娈碉紙鏅氫笂10鐐瑰埌鏃╀笂6鐐癸級
+    off_hours:
+        EventTime|re: 'T(2[2-3]|0[0-5]):'
+    # 鎺掗櫎鍩熸帶涓婄殑姝ｅ父鐢ㄦ埛鍒涘缓锛堢敱绠＄悊鍛樻搷浣滐級
+    filter_normal:
+        ComputerName: 'DC01'
+        SubjectUserName|endswith:
+            - 'administrator'
+            - 'admin'
+    condition: selection and (suspicious_username or off_hours) and not filter_normal
+fields:
+    - EventID
+    - TargetUserName
+    - SubjectUserName
+    - ComputerName
+    - EventTime
+falsepositives:
+    - 绠＄悊鍛樺湪闈炲伐浣滄椂娈电揣鎬ュ垱寤鸿处鍙?    - 鑷姩鍖栬处鍙峰垱寤鸿剼鏈?    - 鏂板憳宸ュ叆鑱屾祦绋?level: high
+---
+# 鍏宠仈瑙勫垯锛氱敤鎴峰垱寤哄悗绔嬪嵆鍔犲叆绠＄悊鍛樼粍
+title: 鐢ㄦ埛鍒涘缓鍚庣珛鍗冲姞鍏ョ鐞嗗憳缁?id: abc12345-0012-4abc-8def-000000000012
+status: experimental
+description: 妫€娴嬫柊鐢ㄦ埛鍒涘缓鍚庣煭鏃堕棿鍐呰鍔犲叆绠＄悊鍛樼粍锛岄珮搴︾枒浼兼敾鍑昏€呭缓绔嬪悗闂?author: 111lanyan111
+date: 2024/01/15
+tags:
+    - attack.persistence
+    - attack.t1136.001
+detection:
+    user_create:
+        EventID: 4720
+    admin_add:
+        EventID: 4732
+        TargetUserName|contains: 'Administrators'
+    condition: user_create and admin_add | join(TargetUserName) maxspan=1m
+level: critical

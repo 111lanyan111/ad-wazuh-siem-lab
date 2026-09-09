@@ -1,0 +1,70 @@
+﻿title: JuicyPotato / PrintSpoofer / GodPotato 鎻愭潈宸ュ叿妫€娴?id: abc12345-0010-4abc-8def-000000000010
+status: experimental
+description: 妫€娴嬪父瑙佺殑 Windows 鏉冮檺鎻愬崌宸ュ叿锛屽寘鎷?JuicyPotato銆丳rintSpoofer銆丟odPotato銆丷ottenPotato 绛夊埄鐢?SeImpersonatePrivilege 鐨勫伐鍏?references:
+    - https://attack.mitre.org/techniques/T1068/
+    - https://github.com/ohpe/juicy-potato
+    - https://github.com/itm4n/PrintSpoofer
+    - https://github.com/BeichenDream/GodPotato
+author: 111lanyan111
+date: 2024/01/15
+tags:
+    - attack.privilege_escalation
+    - attack.t1068
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    # 鍩轰簬杩涚▼鍚嶆娴?    selection_process:
+        Image|contains:
+            - 'juicypotato'
+            - 'juicy potato'
+            - 'printspoofer'
+            - 'print spoofer'
+            - 'godpotato'
+            - 'god potato'
+            - 'rottenpotato'
+            - 'rotten potato'
+            - 'hotpotato'
+            - 'hot potato'
+            - 'tater.exe'
+            - 'sweetpotato'
+    # 鍩轰簬鍛戒护琛屽弬鏁版娴?    selection_cmdline:
+        CommandLine|contains:
+            - '-t *'
+            - '-p cmd.exe'
+            - '-c cmd.exe'
+            - 'SeImpersonate'
+            - 'SeAssignPrimaryToken'
+            - '/impersonate'
+    # 鍩轰簬鍙枒鐨勬湰鍦?RPC 杩炴帴锛圕OM 鎻愭潈鐗瑰緛锛?    selection_network:
+        Image|endswith:
+            - '\cmd.exe'
+            - '\powershell.exe'
+        DestinationIp: '127.0.0.1'
+        DestinationPort:
+            - 135
+            - 1337
+            - 6666
+            - 8888
+    # 鏅€氱敤鎴峰垱寤虹鐞嗗憳鐢ㄦ埛锛堟彁鏉冨悗甯歌琛屼负锛?    selection_admin_create:
+        Image|endswith:
+            - '\net.exe'
+            - '\net1.exe'
+        CommandLine|contains:
+            - 'user'
+            - '/add'
+        ParentImage|endswith:
+            - '\cmd.exe'
+            - '\powershell.exe'
+    condition: selection_process or selection_cmdline or (selection_network and selection_admin_create)
+fields:
+    - Image
+    - CommandLine
+    - ParentImage
+    - User
+    - DestinationIp
+    - DestinationPort
+falsepositives:
+    - 鎺堟潈鐨勬笚閫忔祴璇?    - 瀹夊叏鐮旂┒娲诲姩
+    - 绯荤粺绠＄悊鍛樼殑鍚堟硶鎿嶄綔
+level: critical

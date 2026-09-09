@@ -1,0 +1,58 @@
+﻿title: Windows 鏆村姏鐮磋В鐧诲綍灏濊瘯
+id: abc12345-0001-4abc-8def-000000000001
+status: experimental
+description: 妫€娴嬬煭鏃堕棿鍐呮潵鑷悓涓€婧怚P鐨勫ぇ閲廤indows鐧诲綍澶辫触浜嬩欢锛屽彲鑳芥槸鏆村姏鐮磋В鏀诲嚮
+references:
+    - https://attack.mitre.org/techniques/T1110/001/
+    - https://docs.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4625
+author: 111lanyan111
+date: 2024/01/15
+modified: 2024/01/15
+tags:
+    - attack.credential_access
+    - attack.t1110.001
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 4625
+        LogonType:
+            - 2  # Interactive
+            - 3  # Network
+            - 10 # RemoteInteractive (RDP)
+    filter:
+        IpAddress:
+            - '127.0.0.1'
+            - '::1'
+    condition: selection and not filter
+    timeframe: 5m
+fields:
+    - EventID
+    - SubjectUserName
+    - TargetUserName
+    - IpAddress
+    - LogonType
+    - WorkstationName
+falsepositives:
+    - 鐢ㄦ埛蹇樿瀵嗙爜澶氭灏濊瘯锛堥€氬父<5娆★級
+    - 鏈嶅姟璐﹀彿瀵嗙爜杩囨湡瀵艰嚧鐨勮嚜鍔ㄩ噸璇?    - 鐩戞帶绯荤粺鐨勫仴搴锋鏌?level: high
+---
+# 鑱氬悎瑙勫垯锛?鍒嗛挓鍐呭悓涓€IP瓒呰繃10娆＄櫥褰曞け璐?title: Windows 鏆村姏鐮磋В鑱氬悎鍛婅
+id: abc12345-0002-4abc-8def-000000000002
+status: experimental
+description: 5鍒嗛挓鍐呮潵鑷悓涓€婧怚P鐨勭櫥褰曞け璐ヨ秴杩?0娆★紝楂樺害鐤戜技鏆村姏鐮磋В
+author: 111lanyan111
+date: 2024/01/15
+tags:
+    - attack.credential_access
+    - attack.t1110.001
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 4625
+    condition: selection | count(IpAddress) > 10 by IpAddress
+    timeframe: 5m
+level: critical

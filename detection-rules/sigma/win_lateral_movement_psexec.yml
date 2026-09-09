@@ -1,0 +1,58 @@
+﻿title: PsExec 妯悜绉诲姩妫€娴?id: abc12345-0007-4abc-8def-000000000007
+status: experimental
+description: 妫€娴?PsExec 鎴栫被浼煎伐鍏凤紙PAExec銆乄MIExec锛夌殑妯悜绉诲姩琛屼负锛屽寘鎷繙绋嬫湇鍔″垱寤哄拰 PSEXESVC 杩涚▼
+references:
+    - https://attack.mitre.org/techniques/T1021/002/
+    - https://attack.mitre.org/techniques/T1543/003/
+    - https://docs.microsoft.com/en-us/sysinternals/downloads/psexec
+author: 111lanyan111
+date: 2024/01/15
+tags:
+    - attack.lateral_movement
+    - attack.t1021.002
+    - attack.t1543.003
+logsource:
+    product: windows
+    category: process_creation
+detection:
+    # PsExec 瀹㈡埛绔墽琛?    selection_psexec_client:
+        Image|endswith:
+            - '\psexec.exe'
+            - '\psexec64.exe'
+            - '\paexec.exe'
+        CommandLine|contains:
+            - '\\\\'
+            - '-s '
+            - '-i '
+            - 'cmd.exe'
+            - 'powershell.exe'
+    # PSEXESVC 鏈嶅姟绔繘绋嬶紙鍦ㄧ洰鏍囦富鏈轰笂锛?    selection_psexec_server:
+        Image|endswith: '\PSEXESVC.exe'
+        ParentImage|endswith: '\services.exe'
+    # 杩滅▼鏈嶅姟鍒涘缓
+    selection_service_create:
+        Image|endswith: '\sc.exe'
+        CommandLine|contains:
+            - '\\\\'
+            - 'create'
+            - 'binPath='
+    # 鏈嶅姟鍙墽琛屾枃浠跺啓鍏ュ埌 Windows 鐩綍
+    selection_file_drop:
+        Image|endswith:
+            - '\PSEXESVC.exe'
+            - '\PAEXEC.exe'
+        TargetFilename|contains:
+            - '\Windows\'
+            - '\Windows\Temp\'
+    condition: 1 of selection_*
+fields:
+    - Image
+    - CommandLine
+    - ParentImage
+    - User
+    - TargetFilename
+falsepositives:
+    - 绠＄悊鍛樹娇鐢?PsExec 杩涜鍚堟硶绯荤粺绠＄悊
+    - 杞欢閮ㄧ讲宸ュ叿浣跨敤绫讳技鏈哄埗
+    - 杩滅▼鏀寔宸ュ叿
+level: high
