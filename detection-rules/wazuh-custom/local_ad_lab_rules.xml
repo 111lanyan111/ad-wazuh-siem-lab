@@ -1,0 +1,222 @@
+<!--
+  Wazuh 自定义规则 - AD + Wazuh SIEM 实验室
+  放置路径：/var/ossec/etc/rules/local_ad_lab_rules.xml
+  重启服务：systemctl restart wazuh-manager
+-->
+
+<group name="windows,ad_lab,">
+
+  <!-- ============================================ -->
+  <!-- 场景1：暴力破解                              -->
+  <!-- ============================================ -->
+
+  <!-- Windows 登录失败（基础规则，级别5） -->
+  <rule id="100001" level="5">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^4625$</field>
+    <description>Windows 登录失败 - 用户 $(win.eventdata.targetUserName) 从 $(win.eventdata.ipAddress)</description>
+    <group>authentication_failure,</group>
+  </rule>
+
+  <!-- 同一IP 5分钟内超过10次登录失败（暴力破解，级别10） -->
+  <rule id="100002" level="10" frequency="10" timeframe="300">
+    <if_matched_sid>100001</if_matched_sid>
+    <same_field>win.eventdata.ipAddress</same_field>
+    <description>Windows 暴力破解检测 - 来自 $(win.eventdata.ipAddress) 的多次登录失败</description>
+    <group>brute_force,attack,</group>
+  </rule>
+
+  <!-- 登录失败后成功登录（暴力破解成功，级别12） -->
+  <rule id="100003" level="12">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^4624$</field>
+    <field name="win.eventdata.logonType">^[23]$|^10$</field>
+    <description>Windows 登录成功 - 用户 $(win.eventdata.targetUserName) 从 $(win.eventdata.ipAddress)</description>
+    <group>authentication_success,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- 场景2：Pass-the-Hash / 凭证窃取             -->
+  <!-- ============================================ -->
+
+  <!-- Mimikatz 进程创建检测（级别12） -->
+  <rule id="100010" level="12">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^1$</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)mimikatz</field>
+    <description>Mimikatz 凭证窃取工具执行 - $(win.eventdata.image)</description>
+    <group>credential_access,attack,</group>
+  </rule>
+
+  <!-- Mimikatz 命令行参数检测（级别13） -->
+  <rule id="100011" level="13">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^1$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(sekurlsa|lsadump|privilege::debug|kerberos::golden)</field>
+    <description>Mimikatz 凭证窃取命令执行 - $(win.eventdata.commandLine)</description>
+    <group>credential_access,attack,</group>
+  </rule>
+
+  <!-- LSASS 内存转储检测（级别12） -->
+  <rule id="100012" level="12">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^1$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(procdump.*lsass|comsvcs.*MiniDump|lsass\.dmp)</field>
+    <description>LSASS 内存转储检测 - 可能的凭证窃取行为</description>
+    <group>credential_access,attack,</group>
+  </rule>
+
+  <!-- Pass-the-Hash NTLM 网络登录（级别10） -->
+  <rule id="100013" level="10">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^4624$</field>
+    <field name="win.eventdata.logonType">^3$</field>
+    <field name="win.eventdata.authenticationPackageName">^NTLM$</field>
+    <field name="win.eventdata.targetUserName" type="pcre2">(?i)(administrator|admin|backup)</field>
+    <description>可疑 NTLM 网络登录（可能是 Pass-the-Hash）- 用户 $(win.eventdata.targetUserName) 从 $(win.eventdata.ipAddress)</description>
+    <group>lateral_movement,attack,</group>
+  </rule>
+
+  <!-- CreateRemoteThread 注入 LSASS（级别12） -->
+  <rule id="100014" level="12">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^8$</field>
+    <field name="win.eventdata.targetImage" type="pcre2">(?i)lsass\.exe</field>
+    <description>远程线程注入 LSASS - 可能的凭证窃取行为</description>
+    <group>credential_access,attack,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- 场景3：横向移动                              -->
+  <!-- ============================================ -->
+
+  <!-- PsExec 服务端进程检测（级别10） -->
+  <rule id="100020" level="10">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^1$</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)PSEXESVC\.exe</field>
+    <field name="win.eventdata.parentImage" type="pcre2">(?i)services\.exe</field>
+    <description>PsExec 服务端进程执行 - 可能的横向移动</description>
+    <group>lateral_movement,attack,</group>
+  </rule>
+
+  <!-- 远程服务创建检测（级别10） -->
+  <rule id="100021" level="10">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^4697$</field>
+    <field name="win.eventdata.serviceFileName" type="pcre2">(?i)(Temp|Public|AppData)</field>
+    <description>可疑服务创建 - 路径指向临时目录: $(win.eventdata.serviceFileName)</description>
+    <group>lateral_movement,persistence,attack,</group>
+  </rule>
+
+  <!-- 管理员共享访问检测（级别8） -->
+  <rule id="100022" level="8">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^5140$</field>
+    <field name="win.eventdata.shareName" type="pcre2">(?i)(ADMIN\$|C\$|D\$)</field>
+    <description>管理员共享访问 - 来自 $(win.eventdata.ipAddress) 访问 $(win.eventdata.shareName)</description>
+    <group>lateral_movement,</group>
+  </rule>
+
+  <!-- sc.exe 远程服务配置（级别9） -->
+  <rule id="100023" level="9">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^1$</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)sc\.exe</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(\\\\.*(create|config|binPath))</field>
+    <description>远程服务配置命令 - $(win.eventdata.commandLine)</description>
+    <group>lateral_movement,attack,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- 场景4：权限提升                              -->
+  <!-- ============================================ -->
+
+  <!-- JuicyPotato / PrintSpoofer 提权工具检测（级别12） -->
+  <rule id="100030" level="12">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^1$</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)(juicypotato|printspoofer|godpotato|rottenpotato|hotpotato)</field>
+    <description>权限提升工具执行 - $(win.eventdata.image)</description>
+    <group>privilege_escalation,attack,</group>
+  </rule>
+
+  <!-- 服务可执行文件被覆盖（级别10） -->
+  <rule id="100031" level="10">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^11$</field>
+    <field name="win.eventdata.targetFilename" type="pcre2">(?i)(Program Files|Windows\\\\System32).*\\.(exe|dll)$</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)(cmd|powershell|copy|xcopy)</field>
+    <description>服务可执行文件被覆盖 - $(win.eventdata.targetFilename)</description>
+    <group>privilege_escalation,attack,</group>
+  </rule>
+
+  <!-- services.exe 派生 cmd/powershell（级别10） -->
+  <rule id="100032" level="10">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^1$</field>
+    <field name="win.eventdata.parentImage" type="pcre2">(?i)services\.exe</field>
+    <field name="win.eventdata.image" type="pcre2">(?i)(cmd\.exe|powershell\.exe|net\.exe)</field>
+    <description>服务派生可疑进程 - $(win.eventdata.image) (父进程: services.exe)</description>
+    <group>privilege_escalation,attack,</group>
+  </rule>
+
+  <!-- 普通用户创建管理员用户（级别11） -->
+  <rule id="100033" level="11">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^4720$</field>
+    <field name="win.eventdata.subjectUserName" negate="true">administrator</field>
+    <description>非管理员用户创建新用户 - 创建者: $(win.eventdata.subjectUserName), 新用户: $(win.eventdata.targetUserName)</description>
+    <group>privilege_escalation,persistence,attack,</group>
+  </rule>
+
+  <!-- 用户加入管理员组（级别10） -->
+  <rule id="100034" level="10">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^4732$</field>
+    <field name="win.eventdata.targetUserName" type="pcre2">(?i)Administrators</field>
+    <description>用户加入管理员组 - $(win.eventdata.memberName) 被加入 $(win.eventdata.targetUserName)</description>
+    <group>privilege_escalation,persistence,attack,</group>
+  </rule>
+
+  <!-- UAC 绕过检测（级别10） -->
+  <rule id="100035" level="10">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^13$</field>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)(Image File Execution Options|ConsentPromptBehaviorAdmin|EnableLUA)</field>
+    <description>UAC 绕过相关注册表修改 - $(win.eventdata.targetObject)</description>
+    <group>privilege_escalation,defense_evasion,attack,</group>
+  </rule>
+
+  <!-- ============================================ -->
+  <!-- 通用：可疑行为                                -->
+  <!-- ============================================ -->
+
+  <!-- 隐藏用户创建（$结尾）（级别10） -->
+  <rule id="100040" level="10">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^4720$</field>
+    <field name="win.eventdata.targetUserName" type="pcre2">\$$</field>
+    <description>隐藏用户创建（$结尾）- $(win.eventdata.targetUserName)</description>
+    <group>persistence,attack,</group>
+  </rule>
+
+  <!-- 安全日志清除（级别12） -->
+  <rule id="100041" level="12">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^1102$</field>
+    <description>安全日志被清除 - 操作者: $(win.eventdata.subjectUserName)</description>
+    <group>defense_evasion,attack,</group>
+  </rule>
+
+  <!-- RDP 启用（级别8） -->
+  <rule id="100042" level="8">
+    <if_sid>18100</if_sid>
+    <field name="win.system.eventID">^13$</field>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)fDenyTSConnections</field>
+    <field name="win.eventdata.details">^DWORD \(32 位\) = 0x0$</field>
+    <description>RDP 被启用 - 注册表修改</description>
+    <group>persistence,lateral_movement,</group>
+  </rule>
+
+</group>
